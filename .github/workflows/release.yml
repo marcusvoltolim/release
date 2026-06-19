@@ -24,8 +24,8 @@ jobs:
         with:
           # Altere para o tipo do seu projeto (node, python, go, generic, etc.)
           # 'generic' apenas atualiza um arquivo CHANGELOG.md e as tags do Git
-#          release-type: generic
-          target-branch: develop
+          release-type: simple
+#          target-branch: develop
 
   # JOB 2: Só roda se o JOB 1 criar uma release oficial
   pr-to-main:
