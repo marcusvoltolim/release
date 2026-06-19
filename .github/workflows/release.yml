@@ -25,27 +25,12 @@ jobs:
           branch: develop
           noVersionBumpBehavior: patch
 
-      - name: Create Release Branch
+      - name: Create Release Branch and PR to Main
         if: ${{ steps.version.outputs.next != '' }}
         env:
           VERSION: ${{ steps.version.outputs.next }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # Cria a branch e faz o commit vazio de forma simples
           git checkout -b release/$VERSION
-          git commit -am "release: v${VERSION}" --allow-empty
-          git push origin release/$VERSION
-
-      - name: Create Release and Open PR via CLI
-        if: ${{ steps.version.outputs.next != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.next }}
-        run: |
-          # Cria a release apontando para a branch que acabamos de subir
-          gh release create $VERSION --target release/$VERSION --title "$VERSION" --generate-notes
-          
-          # Abre o PR para a main
+          git push -ff origin release/$VERSION
           gh pr create --base main --head release/$VERSION --title "release: merge $VERSION" --body "PR automático da versão $VERSION"
