@@ -23,5 +23,5 @@ jobs:
         with:
           tag: ${{ steps.version.outputs.next }}
           makeLatest: true
-          generateReleaseNotesPreviousTag: true
+          generateReleaseNotes: true
           token: ${{ github.token }}
