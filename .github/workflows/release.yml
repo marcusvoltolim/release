@@ -1,39 +1,27 @@
-name: 🚀 Manual Release & PR to Main
+name: release
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-
 jobs:
-  release-and-pr:
+  release:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      - name: checkout
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
-      - name: Run Semantic Release
-        id: semantic
-        uses: cycjimmy/semantic-release-action@v6
+      - name: version
+        id: version
+        uses: ietf-tools/semver-action@v1
         with:
+          token: ${{ github.token }}
           branch: develop
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Pull Request to Main
-        if: steps.semantic.outputs.new_release_published == 'true'
-        uses: peter-evans/create-pull-request@v8
+      - name: release
+        uses: ncipollo/release-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: sync/release-v${{ steps.semantic.outputs.new_release_version }}
-          base: main
-          title: "chore(release): merge v${{ steps.semantic.outputs.new_release_version }} into main"
-          body: "Pull Request automático da release gerada manualmente."
-          labels: |
-            release
-            automated-pr
+          name: ${{ steps.version.outputs.next }}
+          makeLatest: true
+          body: Changelog Contents
+          token: ${{ github.token }}
