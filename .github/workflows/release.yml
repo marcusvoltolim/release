@@ -20,11 +20,11 @@ jobs:
       # 2. Executa o Semantic Release para gerar a Tag e a Release baseada nos Commits
       - name: Run Semantic Release (Create Tag & Release)
         id: semantic
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v6
         with:
           branch: develop # Força a análise na branch develop
           # Plugins integrados mais atualizados para gerar as notas de versão
-          plugins: |
+          extra_plugins: |
             @semantic-release/commit-analyzer
             @semantic-release/release-notes-generator
             @semantic-release/github
