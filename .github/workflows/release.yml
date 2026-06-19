@@ -6,35 +6,38 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   release-and-pr:
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout do código na branch develop (onde o workflow é disparado)
+      # 1. Checkout do código na branch develop
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # Baixa todo o histórico para o cálculo do SemVer
+          fetch-depth: 0
 
-      # 2. Executa o Semantic Release para gerar a Tag e a Release baseada nos Commits
+      # 2. Executa o Semantic Release (Versão v6 e inputs oficiais mantidos)
       - name: Run Semantic Release (Create Tag & Release)
         id: semantic
         uses: cycjimmy/semantic-release-action@v6
         with:
-          branch: develop # Força a análise na branch develop
-          # Plugins integrados mais atualizados para gerar as notas de versão
+          branch: develop
+          # Mudamos para os inputs estritos que a v6 aceita para matar o warning
           extra_plugins: |
             @semantic-release/commit-analyzer
             @semantic-release/release-notes-generator
             @semantic-release/github
+          # O pulo do gato para ignorar o npm na v6 sem dar erro de falta de package.json:
+          extends: |
+            @semantic-release/release-notes-generator
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3. Abre o Pull Request de sincronização para a branch main
-      # Este passo só roda se o Semantic Release realmente gerou uma nova versão
+      # 3. Abre o Pull Request de sincronização para a branch main (Versão v8 mantida)
       - name: Create Pull Request to Main
-        if: steps.semantic.outputs.new_release_published
+        if: steps.semantic.outputs.new_release_published == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
