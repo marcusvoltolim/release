@@ -42,7 +42,7 @@ jobs:
       - name: Create Pull Request to Main
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+         # token: ${{ secrets.GITHUB_TOKEN }}
           branch: sync/release-${{ needs.release-please.outputs.tag_name }}
           base: main
           title: "chore(release): merge ${{ needs.release-please.outputs.tag_name }} into main"
