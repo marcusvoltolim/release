@@ -17,10 +17,31 @@ jobs:
         with:
           token: ${{ github.token }}
           branch: develop
-#          noVersionBumpBehavior: patch
+          noVersionBumpBehavior: patch
 
       - name: Create Release and Tag
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.version.outputs.next }}
           token: ${{ github.token }}
+
+      - name: Create Pull Request to Main
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: release/${{ steps.version.outputs.next }}
+          base: main
+          title: "(release): merge ${{ steps.version.outputs.next }} into main"
+          body: |
+            ## 🚀 Nova Versão Publicada via Painel!
+            
+            Este é um Pull Request automático para levar o código da release gerada na `develop` direto para a `main`.
+            
+            - **Versão Gerada:** `${{ steps.version.outputs.next }}`
+            - **Origem:** `develop`
+            - **Destino:** `main`
+            
+            A tag já foi criada e as notas de versão estão publicadas na aba de Releases do GitHub.
+          labels: |
+            release
+            automated-pr
