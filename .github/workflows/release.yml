@@ -25,8 +25,7 @@ jobs:
           branch: develop
           noVersionBumpBehavior: patch
 
-      # 🚀 FLUXO ENXUTO: Git Local para o commit + CLI para o resto
-      - name: Create Branch, Commit and Push
+      - name: Create Release Branch
         if: ${{ steps.version.outputs.next != '' }}
         env:
           VERSION: ${{ steps.version.outputs.next }}
@@ -36,7 +35,7 @@ jobs:
           
           # Cria a branch e faz o commit vazio de forma simples
           git checkout -b release/$VERSION
-          git commit --allow-empty -m "release: $VERSION"
+          git commit -am "release: v${VERSION}" --allow-empty
           git push origin release/$VERSION
 
       - name: Create Release and Open PR via CLI
