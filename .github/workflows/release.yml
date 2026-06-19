@@ -1,82 +1,56 @@
-name: Release & PR to Main
+name: 🚀 Manual Release & PR to Main
 
 on:
-  pull_request:
-    branches:
-      - develop
-    types:
-      - closed
+  workflow_dispatch: # Permite o disparo manual pelo botão no GitHub
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  release:
-    if: github.event.pull_request.merged
+  release-and-pr:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      # 1. Checkout do código na branch develop (onde o workflow é disparado)
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necessário para o histórico de commits e tags
+          fetch-depth: 0 # Baixa todo o histórico para o cálculo do SemVer
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      # 2. Executa o Semantic Release para gerar a Tag e a Release baseada nos Commits
+      - name: Run Semantic Release (Create Tag & Release)
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
         with:
-          node-version: 'lts/*'
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Bump version and generate changelog (SemVer)
-        id: versioning
-        run: |
-          # Executa o versionamento automático
-          npx standard-version
-          
-          # Pega a última tag criada pelo git (ex: v1.0.1)
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          
-          # Remove o 'v' se existir para isolar apenas o número da versão (ex: 1.0.1)
-          CLEAN_VERSION=$(echo $LATEST_TAG | sed 's/^v//')
-          
-          # Salva nas variáveis de ambiente do pipeline
-          echo "VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
-          echo "tag_name=$LATEST_TAG" >> $GITHUB_OUTPUT
-
-      - name: Push changes and tags
-        run: |
-          git push origin develop --follow-tags
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: v${{ env.VERSION }}
-          name: Release v${{ env.VERSION }}
-          body: |
-            ## O que mudou nesta Release
-            Confira o CHANGELOG.md para mais detalhes.
-          draft: false
-          prerelease: false
+          branch: develop # Força a análise na branch develop
+          # Plugins integrados mais atualizados para gerar as notas de versão
+          plugins: |
+            @semantic-release/commit-analyzer
+            @semantic-release/release-notes-generator
+            @semantic-release/github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 3. Abre o Pull Request de sincronização para a branch main
+      # Este passo só roda se o Semantic Release realmente gerou uma nova versão
       - name: Create Pull Request to Main
-        uses: peter-evans/create-pull-request@v8
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: release/v${{ env.VERSION }} # Cria uma branch temporária para o PR
+          branch: sync/release-v${{ steps.semantic.outputs.new_release_version }}
           base: main
-          title: "chore(release): merge v${{ env.VERSION }} into main"
+          title: "chore(release): merge v${{ steps.semantic.outputs.new_release_version }} into main"
           body: |
-            Automated PR para sincronizar a release **v${{ env.VERSION }}** com a branch `main`.
+            ## 🚀 Nova Versão Publicada via Painel!
             
-            - **Origem:** develop (via tag v${{ env.VERSION }})
-            - **Destino:** main
+            Este é um Pull Request automático gerado pelo disparo manual da pipeline.
+            
+            - **Versão Gerada:** `v${{ steps.semantic.outputs.new_release_version }}`
+            - **Origem:** `develop`
+            - **Destino:** `main`
+            
+            O histórico de alterações (`CHANGELOG`) e a tag correspondente já foram publicados na aba de Releases do GitHub.
           labels: |
             release
             automated-pr
