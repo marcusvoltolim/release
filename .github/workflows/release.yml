@@ -1,61 +1,54 @@
-name: Release Please & PR to Main
+name: 🚀 Manual Release & PR to Main
 
 on:
-  pull_request:
-    branches:
-      - develop
-    types:
-      - closed
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  # JOB 1: Cuida do versionamento e geração da Release
-  release-please:
-    runs-on: ubuntu-latest
-    outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
-    steps:
-      - uses: googleapis/release-please-action@v5
-        id: release
-        with:
-          # Altere para o tipo do seu projeto (node, python, go, generic, etc.)
-          # 'generic' apenas atualiza um arquivo CHANGELOG.md e as tags do Git
-          release-type: simple
-#          target-branch: main
-          config-file: .github/release-please/release-please-config.json
-          manifest-file: .github/release-please/release-please-manifest.json
-
-  # JOB 2: Só roda se o JOB 1 criar uma release oficial
-  pr-to-main:
-    needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+  release-and-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - name: checkout
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      # Cria o PR trazendo as novidades da develop (que já está com o changelog e a tag nova) para a main
-      - name: Create Pull Request to Main
-        uses: peter-evans/create-pull-request@v8
+      - name: Run Semantic Release (Create Tag & Release)
+        id: version
+        uses: cycjimmy/semantic-release-action@v4
         with:
-         # token: ${{ secrets.GITHUB_TOKEN }}
-          branch: sync/release-${{ needs.release-please.outputs.tag_name }}
+          branch: develop # Força a análise na branch develop
+          # Plugins integrados mais atualizados para gerar as notas de versão
+          plugins: |
+            @semantic-release/commit-analyzer
+            @semantic-release/release-notes-generator
+            @semantic-release/github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. Abre o Pull Request de sincronização para a branch main
+      # Este passo só roda se o Semantic Release realmente gerou uma nova versão
+      - name: Create Pull Request to Main
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: sync/release-v${{ steps.semantic.outputs.new_release_version }}
           base: main
-          title: "chore(release): merge ${{ needs.release-please.outputs.tag_name }} into main"
+          title: "chore(release): merge v${{ steps.semantic.outputs.new_release_version }} into main"
           body: |
-            ## 🚀 Nova Release Detectada!
-            Automated PR para sincronizar a release **${{ needs.release-please.outputs.tag_name }}** com a branch `main`.
+            ## 🚀 Nova Versão Publicada via Painel!
             
-            - **Origem:** develop (contendo os commits da release e changelog atualizado)
-            - **Destino:** main
+            Este é um Pull Request automático gerado pelo disparo manual da pipeline.
             
-            A tag correspondente já foi criada no repositório.
+            - **Versão Gerada:** `v${{ steps.semantic.outputs.new_release_version }}`
+            - **Origem:** `develop`
+            - **Destino:** `main`
+            
+            O histórico de alterações (`CHANGELOG`) e a tag correspondente já foram publicados na aba de Releases do GitHub.
           labels: |
             release
             automated-pr
