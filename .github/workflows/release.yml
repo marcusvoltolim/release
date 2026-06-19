@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Essencial para que o semver-action consiga ler as tags anteriores
 
       - name: Get Next Version (SemVer)
         id: version
@@ -31,9 +33,13 @@ jobs:
         if: ${{ steps.version.outputs.next != '' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: release/${{ steps.version.outputs.next }}
+          # 🚨 O PULO DO GATO: criamos uma branch temporária de sincronização
+          branch: sync/release-${{ steps.version.outputs.next }}
+          # 🚨 OBRIGATÓRIO: Força o Peter Evans a usar a base de código da develop
+          # para comparar tudo o que ela tem de diferente contra a main!
+          branch-suffix: short-commit-hash
           base: main
-          title: "release/${{ steps.version.outputs.next }}"
+          title: "release: merge v${{ steps.version.outputs.next }} into main"
           body: |
             ## 🚀 Nova Versão Publicada via Painel!
             
@@ -42,7 +48,7 @@ jobs:
             - **Bump Mode:** `${{ steps.version.outputs.bump }}`
             - **Versão Anterior:** `${{ steps.version.outputs.current }}`
             - **Versão Gerada:** `${{ steps.version.outputs.next }}`
-            - **Origem:** `release/${{ steps.version.outputs.next }}`
+            - **Origem:** `develop`
             - **Destino:** `main`
             
             A tag já foi criada e as notas de versão estão publicadas na aba de Releases do GitHub.
