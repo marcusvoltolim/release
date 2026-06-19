@@ -32,5 +32,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git checkout -b release/$VERSION
-          git push origin release/$VERSION
+          git push -ff origin release/$VERSION
           gh pr create --base main --head release/$VERSION --title "release: merge $VERSION" --body "PR automático da versão $VERSION"
