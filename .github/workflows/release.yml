@@ -17,10 +17,10 @@ jobs:
         with:
           token: ${{ github.token }}
           branch: develop
+          noVersionBumpBehavior: patch
 
       - name: Create Release and Tag
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.version.outputs.next }}
-          generateReleaseNotes: true
           token: ${{ github.token }}
