@@ -1,0 +1,82 @@
+name: Release & PR to Main
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    if: github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Necessário para o histórico de commits e tags
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and generate changelog (SemVer)
+        id: versioning
+        run: |
+          # Executa o versionamento automático
+          npx standard-version
+          
+          # Pega a última tag criada pelo git (ex: v1.0.1)
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          
+          # Remove o 'v' se existir para isolar apenas o número da versão (ex: 1.0.1)
+          CLEAN_VERSION=$(echo $LATEST_TAG | sed 's/^v//')
+          
+          # Salva nas variáveis de ambiente do pipeline
+          echo "VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+          echo "tag_name=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Push changes and tags
+        run: |
+          git push origin develop --follow-tags
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body: |
+            ## O que mudou nesta Release
+            Confira o CHANGELOG.md para mais detalhes.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request to Main
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: release/v${{ env.VERSION }} # Cria uma branch temporária para o PR
+          base: main
+          title: "chore(release): merge v${{ env.VERSION }} into main"
+          body: |
+            Automated PR para sincronizar a release **v${{ env.VERSION }}** com a branch `main`.
+            
+            - **Origem:** develop (via tag v${{ env.VERSION }})
+            - **Destino:** main
+          labels: |
+            release
+            automated-pr
