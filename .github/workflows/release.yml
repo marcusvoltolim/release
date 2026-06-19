@@ -48,4 +48,4 @@ jobs:
           gh release create $VERSION --target release/$VERSION --title "$VERSION" --generate-notes
           
           # Abre o PR para a main
-          gh pr create --base main --head release/$VERSION --title "release: merge $VERSION" --body "PR automático da versão $VERSION" --label "release"
+          gh pr create --base main --head release/$VERSION --title "release: merge $VERSION" --body "PR automático da versão $VERSION"
