@@ -8,20 +8,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v7
 
-      - name: version
+      - name: Get Next Version (SemVer)
         id: version
         uses: ietf-tools/semver-action@v1
         with:
           token: ${{ github.token }}
           branch: develop
 
-      - name: release
+      - name: Create Release and Tag
         uses: ncipollo/release-action@v1
         with:
-          name: ${{ steps.version.outputs.next }}
+          tag: ${{ steps.version.outputs.next }}
           makeLatest: true
           body: Changelog Contents
           token: ${{ github.token }}
