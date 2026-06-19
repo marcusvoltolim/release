@@ -1,4 +1,5 @@
-name: Release Drafter (Draft Only)
+name: Release Please & PR to Main
+
 on:
   pull_request:
     branches:
@@ -6,15 +7,53 @@ on:
     types:
       - closed
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  update_draft:
-    if: github.event.pull_request.merged
+  # JOB 1: Cuida do versionamento e geração da Release
+  release-please:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - uses: release-drafter/release-drafter@v7
+      - uses: googleapis/release-please-action@v4
+        id: release
         with:
-          config-name: release-drafter.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Altere para o tipo do seu projeto (node, python, go, generic, etc.)
+          # 'generic' apenas atualiza um arquivo CHANGELOG.md e as tags do Git
+          release-type: generic
+          target-branch: develop
+
+  # JOB 2: Só roda se o JOB 1 criar uma release oficial
+  pr-to-main:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # Cria o PR trazendo as novidades da develop (que já está com o changelog e a tag nova) para a main
+      - name: Create Pull Request to Main
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: sync/release-${{ needs.release-please.outputs.tag_name }}
+          base: main
+          title: "chore(release): merge ${{ needs.release-please.outputs.tag_name }} into main"
+          body: |
+            ## 🚀 Nova Release Detectada!
+            Automated PR para sincronizar a release **${{ needs.release-please.outputs.tag_name }}** com a branch `main`.
+            
+            - **Origem:** develop (contendo os commits da release e changelog atualizado)
+            - **Destino:** main
+            
+            A tag correspondente já foi criada no repositório.
+          labels: |
+            release
+            automated-pr
