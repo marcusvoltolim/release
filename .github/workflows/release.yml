@@ -1,56 +1,51 @@
-name: 🚀 Manual Release & PR to Main
+name: release
 
 on:
-  workflow_dispatch: # Permite o disparo manual pelo botão no GitHub
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  release-and-pr:
+  release:
     runs-on: ubuntu-latest
+
     steps:
-      # 1. Checkout do código na branch develop (onde o workflow é disparado)
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # Baixa todo o histórico para o cálculo do SemVer
+          fetch-depth: 0
 
-      # 2. Executa o Semantic Release para gerar a Tag e a Release baseada nos Commits
-      - name: Run Semantic Release (Create Tag & Release)
-        id: semantic
-        uses: cycjimmy/semantic-release-action@v4
+      - name: Get Next Version (SemVer)
+        id: version
+        uses: ietf-tools/semver-action@v1
         with:
-          branch: develop # Força a análise na branch develop
-          # Plugins integrados mais atualizados para gerar as notas de versão
-          plugins: |
-            @semantic-release/commit-analyzer
-            @semantic-release/release-notes-generator
-            @semantic-release/github
+          token: ${{ github.token }}
+          branch: develop
+          noVersionBumpBehavior: patch
+
+      - name: Create Release Branch
+        if: ${{ steps.version.outputs.next != '' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Cria a branch e faz o commit vazio de forma simples
+          git checkout -b release/$VERSION
+          git commit -am "release: v${VERSION}" --allow-empty
+          git push origin release/$VERSION
 
-      # 3. Abre o Pull Request de sincronização para a branch main
-      # Este passo só roda se o Semantic Release realmente gerou uma nova versão
-      - name: Create Pull Request to Main
-        if: steps.semantic.outputs.new_release_published == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: sync/release-v${{ steps.semantic.outputs.new_release_version }}
-          base: main
-          title: "chore(release): merge v${{ steps.semantic.outputs.new_release_version }} into main"
-          body: |
-            ## 🚀 Nova Versão Publicada via Painel!
-            
-            Este é um Pull Request automático gerado pelo disparo manual da pipeline.
-            
-            - **Versão Gerada:** `v${{ steps.semantic.outputs.new_release_version }}`
-            - **Origem:** `develop`
-            - **Destino:** `main`
-            
-            O histórico de alterações (`CHANGELOG`) e a tag correspondente já foram publicados na aba de Releases do GitHub.
-          labels: |
-            release
-            automated-pr
+      - name: Create Release and Open PR via CLI
+        if: ${{ steps.version.outputs.next != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.next }}
+        run: |
+          # Cria a release apontando para a branch que acabamos de subir
+          gh release create $VERSION --target release/$VERSION --title "$VERSION" --generate-notes
+          
+          # Abre o PR para a main
+          gh pr create --base main --head release/$VERSION --title "release: merge $VERSION" --body "PR automático da versão $VERSION"
