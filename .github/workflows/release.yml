@@ -16,6 +16,7 @@ jobs:
         uses: paulhatch/semantic-version@v6.0.2
         with:
           branch: develop
+          version_format: "v${major}.${minor}.${patch}"
 
       - name: Create Release and Tag
         uses: ncipollo/release-action@v1
