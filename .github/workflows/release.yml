@@ -13,13 +13,14 @@ jobs:
 
       - name: Get Next Version (SemVer)
         id: version
-        uses: paulhatch/semantic-version@v6.0.2
+        uses: ietf-tools/semver-action@v1
         with:
+          token: ${{ github.token }}
           branch: develop
+#          noVersionBumpBehavior: patch
 
       - name: Create Release and Tag
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ steps.version.outputs.version }}
-          name: ${{ steps.version.outputs.version_tag }}
+          tag: ${{ steps.version.outputs.next }}
           token: ${{ github.token }}
