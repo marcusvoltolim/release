@@ -25,22 +25,12 @@ jobs:
           branch: develop
           noVersionBumpBehavior: patch
 
-      - name: Create Release Branch
-        if: ${{ steps.version.outputs.next != '' }}
-        env:
-          VERSION: ${{ steps.version.outputs.next }}
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git checkout -b release/$VERSION
-          git commit --allow-empty -m "release: v${VERSION}"
-          git push origin release/$VERSION
-
-      - name: Create PR
+      - name: Create Release Branch and PR to Main
         if: ${{ steps.version.outputs.next != '' }}
         env:
           VERSION: ${{ steps.version.outputs.next }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Abre o PR para a main
+          git checkout -b release/$VERSION
+          git push origin release/$VERSION
           gh pr create --base main --head release/$VERSION --title "release: merge $VERSION" --body "PR automático da versão $VERSION"
