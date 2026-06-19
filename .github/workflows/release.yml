@@ -22,7 +22,7 @@ jobs:
         uses: ietf-tools/semver-action@v1
         with:
           token: ${{ github.token }}
-          branch: develop
+          branch: ${{ github.ref_name }}
           noVersionBumpBehavior: patch
 
       - name: Create Release Branch and PR to Main
@@ -31,6 +31,9 @@ jobs:
           VERSION: ${{ steps.version.outputs.next }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git checkout -b release/$VERSION
-          git push -ff origin release/$VERSION
+          git commit --allow-empty -m "release: v${VERSION}"
+          git push -u origin release/$VERSION
           gh pr create --base main --head release/$VERSION --title "release: merge $VERSION" --body "PR automático da versão $VERSION"
